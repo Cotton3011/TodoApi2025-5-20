@@ -1,0 +1,164 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta charset="UTF-8">
+	<title>バックエンド接続テスト</title>
+</head>
+
+<body>
+	<h1>API Test</h1>
+	<button onclick="fetchData()">データ取得</button>
+	<pre id="result"></pre>
+	<h2 id="message">初期状態</h2>
+	<button onclick="changeText()" style="padding : 10px 20px">文字変更</button>
+	<input id="nameInput">
+	<button onclick="showInput()">表示</button>
+	<input id="todoTitle" placeholder="Todoタイトルを入力">
+	<button onclick="createTodo()">Todo送信</button>
+	<pre id="postResult"></pre>
+
+	<h2>ログイン</h2>
+	<input id="userName" placeholder="ユーザー名">
+	<input id="password" placeholder="パスワード" type="password">
+	<button onclick="login()">ログイン</button>
+	<pre id="loginResult"></pre>
+
+	<button onclick="getProtectedData()">認証API呼び出し</button>
+	<pre id="protectedResult"></pre>
+
+	<script>
+		//async : この関数の中で「通信待ち」が発生することをブラウザに伝える
+		//function：C#でいうvoid
+		async function fetchData() {
+			//try : まずは「成功する前提」で以下の処理をやってみる
+			try {
+				//fetch : 指定したURL(バックエンド)にデータをもらいに行く
+				//await：サーバーから返事が来るまで、ここで一旦停止して待つ
+				//URLのぽーど番号は、自分のプロジェクトに合わせて書き換える
+				const response = await fetch('https://localhost:7113/WeatherForecast');
+
+				//届いたデータを、JavaSctiptが読みやすい「JSON形式」というパケットに分解する
+				const data = await response.json();
+
+				//【画面更新】idが"result"である場所(上の<pre>タグ)を探し出し、
+				//その中にAPIから届いたデータを文字として書き込む
+				//JSON.stringify(data, null, 2)は「見やすく整形してね」という指示
+				document.getElementById('result').innerText = JSON.stringify(data, null, 2);
+			}
+			catch (err) {
+				//自分の言葉（エラーが発生しました）＋生データを両方出す
+				console.error("エラーが発生しました", err);
+				//画面にポップアップで警告を出す
+				alert("APIの呼び出しに失敗しました。CORSエラーの可能性があります");
+			}
+		}
+
+		//文字変更ボタンでmessageを"変更されました"へ変更
+		function changeText() {
+			//getElementById：HTML取得　innerText：文字変更
+			//document : 現在開いているHTMLページ全体
+			document.getElementById("message").innerText = "変更されました"
+		}
+
+		//messageをnameInputに入力した文字に変更
+		function showInput() {
+			//value :input値取得
+			const value = document.getElementById("nameInput").value;
+			document.getElementById("message").innerText = value;
+		}
+
+		async function createTodo() {
+			try {
+				//inputに入力された文字を取得
+				const title = document.getElementById("todoTitle").value;
+
+				//ASP.NET Core APIへPOST送信
+				const response = await fetch("https://localhost:7113/Todo", {
+					method: "POST",
+
+					// JSONを送ることをサーバーへ伝える
+					headers: {
+						"Content-Type": "application/json"
+					},
+
+					//JavaSctiptのデータをJSON文字列へ変換
+					body: JSON.stringify({
+						title: title
+					})
+				});
+
+				//APIから帰ってきたJSONをJavaScriptで読める形に変換
+				const data = await response.json();
+
+				//結果を画面表示
+				document.getElementById("postResult").innerText = JSON.stringify(data, null, 2);
+			}
+			catch (err) {
+				console.error(err);
+				alert("POST通信に失敗しました");
+			}
+		}
+
+		async function login() {
+			try
+			{
+				const userName = document.getElementById("userName").value;
+				const password = document.getElementById("password").value;
+
+				const response = await fetch("https://localhost:7113/Auth/login", {
+				method: "POST",
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify({
+						userName: userName,
+						password: password
+					})
+			
+				});
+
+				const data = await response.json();
+				if (response.ok) {
+					localStorage.setItem("token", data.token);
+				}
+
+				document.getElementById("loginResult").innerText = JSON.stringify(data, null, 2);
+			}
+			catch(err)
+			{
+				console.error(err);
+				alert("ログイン通信に失敗しました");
+			}
+		}
+
+		async function getProtectedData() {
+			try {
+				//LocalStorageからtoken取得
+				const token = localStorage.getItem("token");
+
+				//token付きでAPI呼び出し
+				const response = await fetch("https://localhost:7113/Todo/protected", {
+					method: "GET",
+					headers: {
+						"Authorization": "Bearer " + token
+					}
+				});
+
+				const data = await response.json();
+
+				document.getElementById("protectedResult").innerText = JSON.stringify(data, null, 2);
+			}
+			catch (err) {
+				console.error(err);
+				alert("認証API呼び出しに失敗しました");
+			}
+		}
+
+	</script>
+</body>
+</html>
+
+
+
+
+
